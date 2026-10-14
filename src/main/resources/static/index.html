@@ -1,0 +1,159 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>GitHub Repository Analytics</title>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<header>
+    <h1>GitHub Repository Analytics</h1>
+    <p>Monitor repository activity and programming languages</p>
+</header>
+
+<main>
+
+    <!-- Dashboard summary -->
+    <section>
+        <h2>Dashboard Overview</h2>
+
+        <div class="stats-container">
+
+            <div class="stat-card">
+                <h3>Total Repositories</h3>
+                <p id="totalRepositories">Loading...</p>
+            </div>
+
+            <div class="stat-card">
+                <h3>Languages Tracked</h3>
+                <p id="totalLanguages">Loading...</p>
+            </div>
+
+            <div class="stat-card">
+                <h3>Trending Repositories</h3>
+                <p id="totalTrending">Loading...</p>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- Trending repositories -->
+    <section>
+        <h2>Trending Repositories</h2>
+
+        <p>
+            Ranked by star growth between the two most recent
+            snapshots for each repository.
+        </p>
+
+        <div class="chart-container">
+            <canvas id="trendingChart"></canvas>
+        </div>
+
+
+        <table>
+            <thead>
+            <tr>
+                <th>Rank</th>
+                <th>Repository</th>
+                <th>Language</th>
+                <th>Star Growth</th>
+            </tr>
+            </thead>
+
+            <tbody id="trendingTable">
+            <tr>
+                <td colspan="4">Loading...</td>
+            </tr>
+            </tbody>
+        </table>
+    </section>
+
+    <!-- Language statistics -->
+    <section>
+        <h2>Programming Language Statistics</h2>
+
+        <div class="chart-container">
+            <canvas id="languageChart"></canvas>
+        </div>
+
+        <table>
+            <thead>
+            <tr>
+                <th>Language</th>
+                <th>Repositories</th>
+                <th>Percentage</th>
+            </tr>
+            </thead>
+
+            <tbody id="languageTable">
+            <tr>
+                <td colspan="3">Loading...</td>
+            </tr>
+            </tbody>
+        </table>
+    </section>
+
+    <!-- All tracked repositories -->
+    <section>
+        <h2>Tracked Repositories</h2>
+
+        <table>
+            <thead>
+            <tr>
+                <th>Repository</th>
+                <th>Language</th>
+                <th>Commit Activity</th>
+            </tr>
+            </thead>
+
+            <tbody id="repositoryTable">
+            <tr>
+                <td colspan="3">Loading...</td>
+            </tr>
+            </tbody>
+        </table>
+    </section>
+
+    <!-- Selected repository commit statistics -->
+    <section>
+        <h2>Weekly Commit Activity</h2>
+
+        <h3 id="selectedRepository">
+            Select a repository to view its activity.
+        </h3>
+
+        <div class="chart-container">
+            <canvas id="commitChart"></canvas>
+        </div>
+
+        <div id="commitActivity">
+        </div>
+    </section>
+
+    <button id="refreshButton" type="button">
+        Refresh Dashboard
+    </button>
+
+    <p id="dashboardStatus" role="status"></p>
+
+</main>
+
+<footer>
+    <p>GitHub Repository Analytics Capstone Project</p>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+<script src="app.js"></script>
+
+</body>
+</html>
