@@ -24,6 +24,8 @@ async function loadDashboard() {
 
     status.textContent = "Loading dashboard...";
 
+    loadScanHistory();
+
     try {
 
         const [
@@ -494,3 +496,166 @@ document.getElementById("refreshButton")
     .addEventListener("click", loadDashboard);
 
 loadDashboard();
+
+
+async function loadScanHistory() {
+
+    const container =
+        document.getElementById("scanHistoryContainer");
+
+    container.textContent = "Loading scan history...";
+
+    try {
+
+        const history = await fetchData("/scans/history");
+
+        container.innerHTML = "";
+
+        if (history.length === 0) {
+
+            container.textContent =
+                "No scan history available yet.";
+
+            return;
+        }
+
+        // Group snapshots by calendar date.
+        const groupedHistory = {};
+
+        history.forEach(snapshot => {
+
+            if (!snapshot.scanDate) {
+                return;
+            }
+
+            // Example: 2026-10-14T21:00:05
+            // Date portion: 2026-10-14
+            const date = snapshot.scanDate.substring(0, 10);
+
+            if (!groupedHistory[date]) {
+                groupedHistory[date] = [];
+            }
+
+            groupedHistory[date].push(snapshot);
+        });
+
+        // Sort the dates from newest to oldest.
+        const dates = Object.keys(groupedHistory)
+            .sort()
+            .reverse();
+
+        dates.forEach(date => {
+
+            createScanHistorySection(
+                container,
+                date,
+                groupedHistory[date]
+            );
+
+        });
+
+    } catch (error) {
+
+        console.error("Scan history error:", error);
+
+        container.textContent =
+            "Unable to load scan history.";
+
+    }
+}
+
+
+
+function createScanHistorySection(
+    container,
+    date,
+    snapshots) {
+
+    // Create the date heading.
+    const dateHeading = document.createElement("div");
+
+    dateHeading.className = "scan-history-date";
+
+    const displayDate = new Date(date + "T12:00:00");
+
+    dateHeading.textContent =
+        displayDate.toLocaleDateString("en-US", {
+            year: "numeric",
+            month: "long",
+            day: "numeric"
+        }) + " - " + snapshots.length + " repositories";
+
+    container.appendChild(dateHeading);
+
+    // Create the table.
+    const table = document.createElement("table");
+
+    table.className = "scan-history-table";
+
+    // Create table header.
+    const header = table.createTHead();
+    const headerRow = header.insertRow();
+
+    const columns = [
+        "Time",
+        "Repository",
+        "Status",
+        "Stars",
+        "Language"
+    ];
+
+    columns.forEach(column => {
+
+        const cell = document.createElement("th");
+        cell.textContent = column;
+        headerRow.appendChild(cell);
+
+    });
+
+    // Create table body.
+    const body = table.createTBody();
+
+    snapshots.sort((a, b) =>
+        b.scanDate.localeCompare(a.scanDate)
+    );
+
+    snapshots.forEach(snapshot => {
+
+        const row = body.insertRow();
+
+        // Time
+        const time = snapshot.scanDate
+            ? snapshot.scanDate.substring(11, 19)
+            : "Unknown";
+
+        row.insertCell().textContent = time;
+
+        // Repository name
+        row.insertCell().textContent =
+            snapshot.fullName ?? "Unknown";
+
+        // New or existing
+        const statusCell = row.insertCell();
+
+        statusCell.textContent =
+            snapshot.newRepository ? "New" : "Existing";
+
+        statusCell.className =
+            snapshot.newRepository
+                ? "scan-new"
+                : "scan-existing";
+
+        // Star count
+        row.insertCell().textContent =
+            snapshot.starCount != null
+                ? Number(snapshot.starCount).toLocaleString()
+                : "N/A";
+
+        // Primary language
+        row.insertCell().textContent =
+            snapshot.primaryLanguage || "Unknown";
+
+    });
+
+    container.appendChild(table);
+}

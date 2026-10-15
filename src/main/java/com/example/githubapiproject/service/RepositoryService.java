@@ -61,62 +61,107 @@ public class RepositoryService {
         return repository;
     }
 
-    public Repository importGithubRepository(GithubRepositoryResponse githubRepository){
+    public Repository importGithubRepository(
+            GithubRepositoryResponse githubRepository) {
+
+        return importGithubRepository(githubRepository, true);
+    }
+
+    public Repository importGithubRepository(
+            GithubRepositoryResponse githubRepository,
+            boolean createSnapshot) {
+
+        Optional<Repository> existingRepository =
+                repositoryRepository.findByGithubId(
+                        githubRepository.getId()
+                );
+
         Repository repository;
 
-        Optional<Repository> existingRepository = repositoryRepository.findByGithubId(githubRepository.getId());
-
         if (existingRepository.isPresent()) {
+
             repository = existingRepository.get();
-        }else{
+
+        } else {
+
             repository = convertGithubRepository(githubRepository);
             repository = repositoryRepository.save(repository);
         }
 
-        RepositorySnapshot snapshot = new RepositorySnapshot();
-        snapshot.setRepositoryId(repository.getId());
-        snapshot.setScanDate(LocalDateTime.now());
-        snapshot.setStarCount(githubRepository.getStargazers_count());
-        snapshot.setForkCount(githubRepository.getForks_count());
-        snapshotRepository.save(snapshot);
+        if (createSnapshot) {
+            createSnapshotFromGithub(repository, githubRepository);
+        }
 
         return repository;
     }
 
-    public DiscoveryResponse discoverRepositories(List<GithubRepositoryResponse> githubRepositories){
+    public DiscoveryResponse discoverRepositories(
+            List<GithubRepositoryResponse> githubRepositories) {
+
         int repositoriesFound = githubRepositories.size();
         int newRepositories = 0;
         int existingRepositories = 0;
 
+        for (GithubRepositoryResponse githubRepository : githubRepositories) {
 
-
-        for(GithubRepositoryResponse githubRepository : githubRepositories){
-            Optional<Repository> existingRepository = repositoryRepository.findByGithubId(githubRepository.getId());
+            Optional<Repository> existingRepository =
+                    repositoryRepository.findByGithubId(
+                            githubRepository.getId()
+                    );
 
             if (existingRepository.isEmpty()) {
-                importGithubRepository(githubRepository);
+
+                // The scan loop will create the snapshot later.
+                importGithubRepository(githubRepository, false);
                 newRepositories++;
-            }else{
+
+            } else {
+
                 existingRepositories++;
             }
         }
-        return new DiscoveryResponse(repositoriesFound,newRepositories,existingRepositories);
+
+        return new DiscoveryResponse(
+                repositoriesFound,
+                newRepositories,
+                existingRepositories
+        );
     }
+
 
     public RepositorySnapshot createSnapshotFromGithub(
             Repository repository,
             GithubRepositoryResponse githubRepository) {
 
+        // Preserve compatibility with existing manual imports.
+        return createSnapshotFromGithub(
+                repository,
+                githubRepository,
+                null,
+                false
+        );
+    }
+
+    public RepositorySnapshot createSnapshotFromGithub(
+            Repository repository,
+            GithubRepositoryResponse githubRepository,
+            String scanId,
+            boolean newRepository) {
+
         RepositorySnapshot snapshot =
                 new RepositorySnapshot();
 
-        snapshot.setRepositoryId(
-                repository.getId()
+        snapshot.setRepositoryId(repository.getId());
+        snapshot.setScanId(scanId);
+        snapshot.setScanDate(LocalDateTime.now());
+
+        snapshot.setFullName(githubRepository.getFull_name());
+
+        snapshot.setPrimaryLanguage(
+                githubRepository.getLanguage()
         );
 
-        snapshot.setScanDate(
-                LocalDateTime.now()
-        );
+        snapshot.setNewRepository(newRepository);
 
         snapshot.setStarCount(
                 githubRepository.getStargazers_count()
@@ -127,6 +172,27 @@ public class RepositoryService {
         );
 
         return snapshotRepository.save(snapshot);
+    }
+
+
+
+    public Repository updateRepositoryFromGithub(
+            Repository repository,
+            GithubRepositoryResponse githubRepository) {
+
+        repository.setName(githubRepository.getName());
+        repository.setFullName(githubRepository.getFull_name());
+        repository.setUrl(githubRepository.getHtml_url());
+        repository.setDescription(githubRepository.getDescription());
+        repository.setPrimaryLanguage(githubRepository.getLanguage());
+
+        String fullName = githubRepository.getFull_name();
+
+        if (fullName != null && fullName.contains("/")) {
+            repository.setOwner(fullName.split("/", 2)[0]);
+        }
+
+        return repositoryRepository.save(repository);
     }
 
 }

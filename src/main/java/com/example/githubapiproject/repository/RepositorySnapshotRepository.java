@@ -11,4 +11,12 @@ public interface RepositorySnapshotRepository extends MongoRepository <Repositor
 
     RepositorySnapshot findTopByRepositoryIdOrderByScanDateDesc(String repositoryId);
 
+    List<RepositorySnapshot> findByScanIdOrderByScanDateAsc(
+            String scanId
+    );
+    List<RepositorySnapshot> findByScanIdIsNotNullOrderByScanDateDesc();
+
+    List<RepositorySnapshot>findTop500ByScanIdIsNotNullOrderByScanDateDesc();
+
+
 }
