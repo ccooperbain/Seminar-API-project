@@ -18,6 +18,7 @@ import java.util.Set;
 import java.util.HashSet;
 import java.util.stream.Collectors;
 import java.time.LocalDate;
+import java.util.ArrayList;
 
 @Service
 public class ScanService {
@@ -27,6 +28,8 @@ public class ScanService {
     private final RepositoryService repositoryService;
     private final RepositoryRepository repositoryRepository;
     private final RepositorySnapshotRepository snapshotRepository;
+    private final java.util.concurrent.atomic.AtomicBoolean scanRunning =
+            new java.util.concurrent.atomic.AtomicBoolean(false);
 
     public ScanService(
             ScanRepository scanRepository,
@@ -94,6 +97,21 @@ public class ScanService {
 
     public Scan runScan() {
 
+        if (!scanRunning.compareAndSet(false, true)) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.CONFLICT,
+                    "A scan is already running"
+            );
+        }
+
+        try {
+            return executeScan();
+        } finally {
+            scanRunning.set(false);
+        }
+    }
+
+    private Scan executeScan() {
         Scan scan = startScan();
 
         int repositoriesDiscovered = 0;
@@ -159,16 +177,37 @@ public class ScanService {
             );
 
             // Step 4: Scan all tracked repositories.
-            List<Repository> repositories =
-                    repositoryService.getAllRepositories();
+            List<Repository> allRepositories =
+                    new ArrayList<>(repositoryService.getAllRepositories());
+
+            allRepositories.sort(
+                    java.util.Comparator.comparing(Repository::getId)
+            );
 
             int maxRepositoriesPerScan = 30;
 
-            if (repositories.size() > maxRepositoriesPerScan) {
-                repositories = repositories.subList(
-                        0,
-                        maxRepositoriesPerScan
+            List<Repository> repositories = new ArrayList<>();
+
+            if (!allRepositories.isEmpty()) {
+
+                int startIndex = (int) (
+                        (scanRepository.count() - 1)
+                                * maxRepositoriesPerScan
+                                % allRepositories.size()
                 );
+
+                int count = Math.min(
+                        maxRepositoriesPerScan,
+                        allRepositories.size()
+                );
+
+                for (int i = 0; i < count; i++) {
+
+                    int index = (startIndex + i)
+                            % allRepositories.size();
+
+                    repositories.add(allRepositories.get(index));
+                }
             }
 
             for (Repository repository : repositories) {
@@ -254,6 +293,7 @@ public class ScanService {
             throw exception;
         }
     }
+
 
     public List<RepositorySnapshot> getScanHistory() {
 
